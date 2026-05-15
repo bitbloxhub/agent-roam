@@ -1,0 +1,14 @@
+{
+	"name": "agent-roam",
+	"type": "module",
+	"packageManager": "pnpm@10.19.0",
+	"scripts": {
+		"lint": "eslint .",
+		"lint:fix": "eslint . --fix",
+		"typecheck": "pnpm -r --if-present run typecheck"
+	},
+	"devDependencies": {
+		"@antfu/eslint-config": "catalog:",
+		"eslint": "catalog:"
+	}
+}

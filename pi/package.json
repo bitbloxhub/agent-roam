@@ -1,0 +1,23 @@
+{
+	"name": "agent-roam-pi",
+	"type": "module",
+	"version": "0.1.0",
+	"scripts": {
+		"typecheck": "tsc -p tsconfig.json"
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-coding-agent": "^0.74.0",
+		"@earendil-works/pi-tui": "^0.74.0"
+	},
+	"devDependencies": {
+		"@earendil-works/pi-coding-agent": "catalog:",
+		"@earendil-works/pi-tui": "catalog:",
+		"@types/node": "catalog:",
+		"typescript": "catalog:"
+	},
+	"pi": {
+		"extensions": [
+			"./src/index.ts"
+		]
+	}
+}

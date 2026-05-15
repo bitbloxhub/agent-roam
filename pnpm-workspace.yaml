@@ -1,0 +1,14 @@
+shellEmulator: true
+
+trustPolicy: no-downgrade
+
+packages:
+  - pi
+
+catalog:
+  "@antfu/eslint-config": 8.2.0
+  "@earendil-works/pi-coding-agent": 0.74.0
+  "@earendil-works/pi-tui": 0.74.0
+  "@types/node": 24.6.0
+  eslint: 10.3.0
+  typescript: 5.9.3

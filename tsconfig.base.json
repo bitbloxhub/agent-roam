@@ -1,0 +1,20 @@
+{
+	"$schema": "https://json.schemastore.org/tsconfig",
+	"compilerOptions": {
+		"target": "esnext",
+		"module": "esnext",
+		"moduleResolution": "bundler",
+		"resolveJsonModule": true,
+		"types": ["node"],
+		"allowJs": true,
+		"checkJs": true,
+		"strict": true,
+		"noEmit": true,
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"isolatedModules": true,
+		"verbatimModuleSyntax": true,
+		"skipLibCheck": true
+	},
+	"exclude": ["node_modules", "dist"]
+}

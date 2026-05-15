@@ -20,7 +20,7 @@ const PI_AGENT_DIR = getAgentDir()
 const AGENT_ROOT = path.join(PI_AGENT_DIR, "..", "agent-roam")
 
 function sanitizeAgentName(raw: string) {
-	return raw.trim().replace(/[^\w.-]/g, "-") || "default"
+	return raw.trim().replace(/^\0/, "").replace(/[^\w.-]/g, "-") || "default"
 }
 
 function listAgentNames() {
@@ -149,7 +149,8 @@ function getAgentCompletions(prefix: string): AutocompleteItem[] | null {
 		.filter(name => name.startsWith(p))
 		.map(name => ({ value: name, label: name }))
 	if (p.length > 0 && !items.some(i => i.value === p)) {
-		items.unshift({ value: p, label: `${p} (new)` })
+		// Make it appear at the end by putting \0 in front
+		items.push({ value: `\0${p}`, label: `${p} (new)` })
 	}
 	return items.length > 0 ? items : (p ? [{ value: p, label: `${p} (new)` }] : null)
 }

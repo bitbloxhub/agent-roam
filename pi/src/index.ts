@@ -194,6 +194,7 @@ export default function (pi: ExtensionAPI) {
 			const content = [
 				"# Agent-roam injected context",
 				skill ? `\n## Skill\n${skill}` : "",
+				"\n## KB git repo\nAGENT_ROAM_KB_DIR is always a git repo in this extension. Follow skill \"Git sync (optional)\" steps after memory edits and org-roam DB sync.",
 				tags ? `\n## Tag list\n${tags.split(/\\s+/).filter(Boolean).map(tag => `- \`${tag}\``).join("\\n")}` : "\n## Tag list\n(none)",
 				notes.length ? `\n## System-tagged notes\n${notes.join("\n\n")}` : "\n## System-tagged notes\n(none)",
 			].join("\n")

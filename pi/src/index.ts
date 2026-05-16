@@ -143,6 +143,55 @@ function readTagList(runtime: AgentRuntime) {
 	return out.trim()
 }
 
+function launchReflectionSubagent(
+	runtime: AgentRuntime,
+	ctx: ExtensionContext,
+	sourceSessionName: string,
+	sourceSessionFile: string | undefined,
+	modelId?: string,
+) {
+	const reflectionPromptPath = path.join(PI_AGENT_DIR, "skills", "agent-roam", "reflection.md")
+	if (!existsSync(reflectionPromptPath))
+		return { status: "skipped", message: `missing reflection prompt: ${reflectionPromptPath}` } as const
+	const reflectionPrompt = readFileSync(reflectionPromptPath, "utf8").trim()
+	if (!reflectionPrompt)
+		return { status: "skipped", message: "empty reflection prompt" } as const
+	if (!sourceSessionFile)
+		return { status: "skipped", message: "source session file unavailable" } as const
+
+	const env = {
+		...process.env,
+		AGENT_ROAM_KB_DIR: runtime.kbDir,
+		AGENT_ROAM_STATE_DIR: runtime.stateDir,
+		AGENT_EMACS_SOCKET: runtime.socket,
+		AGENT_ROAM_REFLECTION_CHILD: "1",
+	}
+	const safeSource = sanitizeAgentName(sourceSessionName || "session")
+	const runName = `agent-roam-reflection-${runtime.agent}-from-${safeSource}-${Date.now()}`
+	const instruction = [
+		reflectionPrompt,
+		"",
+		"Reflect now over inherited session context and update durable memory with tools.",
+	].join("\n")
+	const args = ["-p", "--fork", sourceSessionFile, `/name ${runName}`, instruction]
+	if (modelId)
+		args.push("--model", modelId)
+	const child = spawn("pi", args, {
+		env,
+		stdio: "ignore",
+	})
+	child.on("error", (error) => {
+		ctx.ui.notify(`reflection failed to launch (${runName}): ${error.message}`, "warning")
+	})
+	child.on("exit", (code) => {
+		if (code === 0)
+			ctx.ui.notify(`reflection completed (${runName})`, "info")
+		else
+			ctx.ui.notify(`reflection failed (${runName}), exit=${code ?? "signal"}`, "warning")
+	})
+	return { status: "launched", message: `reflection launched (${runName})` } as const
+}
+
 function getAgentCompletions(prefix: string, currentAgent: string): AutocompleteItem[] | null {
 	const p = prefix.trim()
 	const items = listAgentNames()
@@ -211,6 +260,25 @@ export default function (pi: ExtensionAPI) {
 		}
 	})
 
+	pi.on("session_before_compact", async (_event, ctx) => {
+		if (process.env.AGENT_ROAM_REFLECTION_CHILD === "1")
+			return { cancel: true }
+		try {
+			const rt = runtime ?? startSessionRuntime(ctx.cwd)
+			const ready = await waitForDaemonReady(rt)
+			if (!ready)
+				throw new Error("emacs daemon not ready")
+			const modelRef = ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined
+			const result = launchReflectionSubagent(rt, ctx, pi.getSessionName() || "session", ctx.sessionManager.getSessionFile(), modelRef)
+			if (result.status === "launched")
+				ctx.ui.notify(result.message, "info")
+			else
+				ctx.ui.notify(`agent-roam reflection skipped: ${result.message}`, "warning")
+		} catch (error) {
+			ctx.ui.notify(`agent-roam reflection failed: ${(error as Error).message}`, "warning")
+		}
+	})
+
 	pi.on("session_shutdown", async (_event, ctx) => {
 		ctx.ui.setStatus("agent-roam-agent", undefined)
 		if (!runtime)
@@ -227,6 +295,26 @@ export default function (pi: ExtensionAPI) {
 			runtime = startSessionRuntime(ctx.cwd)
 			ctx.ui.notify(`agent-roam switched to ${runtime.agent} | socket=${runtime.socket}`, "info")
 			updateRoamAgentStatus(runtime.agent, ctx)
+		},
+	})
+
+	pi.registerCommand("reflect", {
+		description: "Launch background memory reflection subagent",
+		handler: async (_args, ctx) => {
+			try {
+				const rt = runtime ?? startSessionRuntime(ctx.cwd)
+				const ready = await waitForDaemonReady(rt)
+				if (!ready)
+					throw new Error("emacs daemon not ready")
+				const modelRef = ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined
+				const result = launchReflectionSubagent(rt, ctx, pi.getSessionName() || "session", ctx.sessionManager.getSessionFile(), modelRef)
+				if (result.status === "launched")
+					ctx.ui.notify(result.message, "info")
+				else
+					ctx.ui.notify(`agent-roam reflection skipped: ${result.message}`, "warning")
+			} catch (error) {
+				ctx.ui.notify(`agent-roam reflect failed: ${(error as Error).message}`, "error")
+			}
 		},
 	})
 }

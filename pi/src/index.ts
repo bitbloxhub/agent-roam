@@ -20,7 +20,7 @@ const PI_AGENT_DIR = getAgentDir()
 const AGENT_ROOT = path.join(PI_AGENT_DIR, "..", "agent-roam")
 
 function sanitizeAgentName(raw: string) {
-	return raw.trim().replace(/^\0/, "").replace(/[^\w.-]/g, "-") || "default"
+	return raw.trim().replace(/[^\w.-]/g, "-") || "default"
 }
 
 function listAgentNames() {
@@ -143,16 +143,15 @@ function readTagList(runtime: AgentRuntime) {
 	return out.trim()
 }
 
-function getAgentCompletions(prefix: string): AutocompleteItem[] | null {
+function getAgentCompletions(prefix: string, currentAgent: string): AutocompleteItem[] | null {
 	const p = prefix.trim()
 	const items = listAgentNames()
 		.filter(name => name.startsWith(p))
-		.map(name => ({ value: name, label: name }))
-	if (p.length > 0 && !items.some(i => i.value === p)) {
-		// Make it appear at the end by putting \0 in front
-		items.push({ value: `\0${p}`, label: `${p} (new)` })
-	}
-	return items.length > 0 ? items : (p ? [{ value: p, label: `${p} (new)` }] : null)
+		.map(name => ({
+			value: name,
+			label: name === currentAgent ? `${name} (current)` : name,
+		}))
+	return items.length > 0 ? items : null
 }
 
 export default function (pi: ExtensionAPI) {
@@ -216,7 +215,7 @@ export default function (pi: ExtensionAPI) {
 
 	pi.registerCommand("agent", {
 		description: "Switch agent-roam memory agent: /agent <name>",
-		getArgumentCompletions: prefix => getAgentCompletions(prefix),
+		getArgumentCompletions: prefix => getAgentCompletions(prefix, selectedAgent),
 		handler: async (args, ctx) => {
 			selectedAgent = sanitizeAgentName(args || "default")
 			runtime = startSessionRuntime(ctx.cwd)

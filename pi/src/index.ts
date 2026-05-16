@@ -1,4 +1,4 @@
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent"
+import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent"
 import type { AutocompleteItem } from "@earendil-works/pi-tui"
 import { spawn, spawnSync } from "node:child_process"
 import { randomUUID } from "node:crypto"
@@ -167,7 +167,7 @@ export default function (pi: ExtensionAPI) {
 		return runtime
 	}
 
-	function updateRoamAgentStatus(currentAgent: string, ctx: { ui: { setStatus: (id: string, text?: string) => void, theme: { fg: (style: string, text: string) => string } } }) {
+	function updateRoamAgentStatus(currentAgent: string, ctx: ExtensionContext) {
 		ctx.ui.setStatus("agent-roam-agent", ctx.ui.theme.fg("dim", `roam agent: ${currentAgent}`))
 	}
 

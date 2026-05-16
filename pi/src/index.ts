@@ -220,12 +220,6 @@ export default function (pi: ExtensionAPI) {
 		ctx.ui.setStatus("agent-roam-agent", ctx.ui.theme.fg("dim", `roam agent: ${currentAgent}`))
 	}
 
-	pi.on("resources_discover", async (event) => {
-		return {
-			skillPaths: [path.join(event.cwd, "skills")],
-		}
-	})
-
 	pi.on("session_start", async (_event, ctx) => {
 		try {
 			const rt = startSessionRuntime(ctx.cwd)

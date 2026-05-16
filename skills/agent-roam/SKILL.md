@@ -132,3 +132,8 @@ Notes:
 - Skip commit if no file changes
 - Agent should write specific conventional commit message based on actual note changes
 - Skip pull/push when repo has no remotes (`git -C "$AGENT_ROAM_KB_DIR" remote`)
+
+## Reflection
+
+Reflection prompt lives in `reflection.md`.
+Use this prompt manually only if agent harness does not support agent-roam reflection.

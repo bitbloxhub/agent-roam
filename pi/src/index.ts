@@ -167,6 +167,10 @@ export default function (pi: ExtensionAPI) {
 		return runtime
 	}
 
+	function updateRoamAgentStatus(currentAgent: string, ctx: { ui: { setStatus: (id: string, text?: string) => void, theme: { fg: (style: string, text: string) => string } } }) {
+		ctx.ui.setStatus("agent-roam-agent", ctx.ui.theme.fg("dim", `roam agent: ${currentAgent}`))
+	}
+
 	pi.on("resources_discover", async (event) => {
 		return {
 			skillPaths: [path.join(event.cwd, "skills")],
@@ -177,6 +181,7 @@ export default function (pi: ExtensionAPI) {
 		try {
 			const rt = startSessionRuntime(ctx.cwd)
 			ctx.ui.notify(`agent-roam ready | agent=${rt.agent} | socket=${rt.socket}`, "info")
+			updateRoamAgentStatus(rt.agent, ctx)
 		} catch (error) {
 			ctx.ui.notify(`agent-roam bootstrap failed: ${(error as Error).message}`, "error")
 		}
@@ -206,7 +211,8 @@ export default function (pi: ExtensionAPI) {
 		}
 	})
 
-	pi.on("session_shutdown", async () => {
+	pi.on("session_shutdown", async (_event, ctx) => {
+		ctx.ui.setStatus("agent-roam-agent", undefined)
 		if (!runtime)
 			return
 		stopDaemon(runtime)
@@ -220,6 +226,7 @@ export default function (pi: ExtensionAPI) {
 			selectedAgent = sanitizeAgentName(args || "default")
 			runtime = startSessionRuntime(ctx.cwd)
 			ctx.ui.notify(`agent-roam switched to ${runtime.agent} | socket=${runtime.socket}`, "info")
+			updateRoamAgentStatus(runtime.agent, ctx)
 		},
 	})
 }

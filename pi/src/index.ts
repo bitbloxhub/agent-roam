@@ -237,6 +237,52 @@ function launchReflectionSubagent(
 	return { status: "launched", message: `reflection launched (${runName})` } as const
 }
 
+interface AgentRoamSettings {
+	reflection: {
+		onCompaction: boolean
+	}
+}
+
+const DEFAULT_AGENT_ROAM_SETTINGS: AgentRoamSettings = {
+	reflection: {
+		onCompaction: true,
+	},
+}
+
+let cachedSettings: AgentRoamSettings | null = null
+
+function readAgentRoamSettings(): AgentRoamSettings {
+	if (cachedSettings)
+		return cachedSettings
+
+	try {
+		const settingsPath = path.join(PI_AGENT_DIR, "settings.json")
+		if (!existsSync(settingsPath)) {
+			cachedSettings = DEFAULT_AGENT_ROAM_SETTINGS
+			return cachedSettings
+		}
+		const parsed = JSON.parse(readFileSync(settingsPath, "utf8")) as {
+			agentRoam?: {
+				reflection?: {
+					onCompaction?: unknown
+				}
+			}
+		}
+		const onCompaction = parsed.agentRoam?.reflection?.onCompaction
+		cachedSettings = {
+			reflection: {
+				onCompaction: typeof onCompaction === "boolean"
+					? onCompaction
+					: DEFAULT_AGENT_ROAM_SETTINGS.reflection.onCompaction,
+			},
+		}
+		return cachedSettings
+	} catch {
+		cachedSettings = DEFAULT_AGENT_ROAM_SETTINGS
+		return cachedSettings
+	}
+}
+
 function getAgentCompletions(prefix: string, currentAgent: string): AutocompleteItem[] | null {
 	const p = prefix.trim()
 	const items = listAgentNames()
@@ -271,6 +317,20 @@ export default function (pi: ExtensionAPI) {
 		writeLastSelectedAgent(selectedAgent)
 		if (!sessionAgent)
 			appendSessionAgent(ctx.sessionManager.getSessionFile(), ctx.sessionManager.getSessionDir(), selectedAgent)
+	}
+
+	async function runReflection(ctx: ExtensionContext) {
+		const rt = runtime ?? startSessionRuntime()
+		const health = await waitForDaemonReady(rt)
+		if (!health.ok)
+			throw new Error(`emacs daemon not ready (${health.reason}) socket=${rt.socket}`)
+		const modelRef = ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined
+		const result = launchReflectionSubagent(rt, ctx, pi.getSessionName() || "session", ctx.sessionManager.getSessionFile(), modelRef)
+		if (result.status === "launched") {
+			ctx.ui.notify(result.message, "info")
+			return
+		}
+		ctx.ui.notify(`agent-roam reflection skipped: ${result.message}`, "warning")
 	}
 
 	function getRoamStatusLines(ctx: ExtensionContext) {
@@ -341,17 +401,11 @@ export default function (pi: ExtensionAPI) {
 	pi.on("session_before_compact", async (_event, ctx) => {
 		if (process.env.AGENT_ROAM_REFLECTION_CHILD === "1")
 			return { cancel: true }
+		const settings = readAgentRoamSettings()
+		if (!settings.reflection.onCompaction)
+			return
 		try {
-			const rt = runtime ?? startSessionRuntime()
-			const health = await waitForDaemonReady(rt)
-			if (!health.ok)
-				throw new Error(`emacs daemon not ready (${health.reason}) socket=${rt.socket}`)
-			const modelRef = ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined
-			const result = launchReflectionSubagent(rt, ctx, pi.getSessionName() || "session", ctx.sessionManager.getSessionFile(), modelRef)
-			if (result.status === "launched")
-				ctx.ui.notify(result.message, "info")
-			else
-				ctx.ui.notify(`agent-roam reflection skipped: ${result.message}`, "warning")
+			await runReflection(ctx)
 		} catch (error) {
 			ctx.ui.notify(`agent-roam reflection failed: ${(error as Error).message}`, "warning")
 		}
@@ -395,16 +449,7 @@ export default function (pi: ExtensionAPI) {
 		description: "Launch background memory reflection subagent",
 		handler: async (_args, ctx) => {
 			try {
-				const rt = runtime ?? startSessionRuntime()
-				const health = await waitForDaemonReady(rt)
-				if (!health.ok)
-					throw new Error(`emacs daemon not ready (${health.reason}) socket=${rt.socket}`)
-				const modelRef = ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined
-				const result = launchReflectionSubagent(rt, ctx, pi.getSessionName() || "session", ctx.sessionManager.getSessionFile(), modelRef)
-				if (result.status === "launched")
-					ctx.ui.notify(result.message, "info")
-				else
-					ctx.ui.notify(`agent-roam reflection skipped: ${result.message}`, "warning")
+				await runReflection(ctx)
 			} catch (error) {
 				ctx.ui.notify(`agent-roam reflect failed: ${(error as Error).message}`, "error")
 			}

@@ -32,7 +32,7 @@ function listAgentNames() {
 		.sort()
 }
 
-function buildRuntime(cwd: string, agent: string): AgentRuntime {
+function buildRuntime(agent: string): AgentRuntime {
 	const name = sanitizeAgentName(agent)
 	const root = path.join(AGENT_ROOT, name)
 	const kbDir = path.join(root, "kb")
@@ -207,10 +207,10 @@ export default function (pi: ExtensionAPI) {
 	let runtime: AgentRuntime | null = null
 	let selectedAgent = "default"
 
-	function startSessionRuntime(cwd: string) {
+	function startSessionRuntime() {
 		if (runtime)
 			stopDaemon(runtime)
-		runtime = buildRuntime(cwd, selectedAgent)
+		runtime = buildRuntime(selectedAgent)
 		applyEnv(runtime)
 		ensureDaemon(runtime)
 		return runtime
@@ -222,7 +222,7 @@ export default function (pi: ExtensionAPI) {
 
 	pi.on("session_start", async (_event, ctx) => {
 		try {
-			const rt = startSessionRuntime(ctx.cwd)
+			const rt = startSessionRuntime()
 			ctx.ui.notify(`agent-roam ready | agent=${rt.agent} | socket=${rt.socket}`, "info")
 			updateRoamAgentStatus(rt.agent, ctx)
 		} catch (error) {
@@ -232,7 +232,7 @@ export default function (pi: ExtensionAPI) {
 
 	pi.on("before_agent_start", async (event, ctx) => {
 		try {
-			const rt = runtime ?? startSessionRuntime(ctx.cwd)
+			const rt = runtime ?? startSessionRuntime()
 			const ready = await waitForDaemonReady(rt)
 			if (!ready)
 				throw new Error("emacs daemon not ready")
@@ -258,7 +258,7 @@ export default function (pi: ExtensionAPI) {
 		if (process.env.AGENT_ROAM_REFLECTION_CHILD === "1")
 			return { cancel: true }
 		try {
-			const rt = runtime ?? startSessionRuntime(ctx.cwd)
+			const rt = runtime ?? startSessionRuntime()
 			const ready = await waitForDaemonReady(rt)
 			if (!ready)
 				throw new Error("emacs daemon not ready")
@@ -286,7 +286,7 @@ export default function (pi: ExtensionAPI) {
 		getArgumentCompletions: prefix => getAgentCompletions(prefix, selectedAgent),
 		handler: async (args, ctx) => {
 			selectedAgent = sanitizeAgentName(args || "default")
-			runtime = startSessionRuntime(ctx.cwd)
+			runtime = startSessionRuntime()
 			ctx.ui.notify(`agent-roam switched to ${runtime.agent} | socket=${runtime.socket}`, "info")
 			updateRoamAgentStatus(runtime.agent, ctx)
 		},
@@ -296,7 +296,7 @@ export default function (pi: ExtensionAPI) {
 		description: "Launch background memory reflection subagent",
 		handler: async (_args, ctx) => {
 			try {
-				const rt = runtime ?? startSessionRuntime(ctx.cwd)
+				const rt = runtime ?? startSessionRuntime()
 				const ready = await waitForDaemonReady(rt)
 				if (!ready)
 					throw new Error("emacs daemon not ready")

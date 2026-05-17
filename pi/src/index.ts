@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto"
 import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs"
 import path from "node:path"
 import process from "node:process"
-import { getAgentDir } from "@earendil-works/pi-coding-agent"
+import { getAgentDir, SessionManager } from "@earendil-works/pi-coding-agent"
 
 interface AgentRuntime {
 	agent: string
@@ -159,6 +159,18 @@ function launchReflectionSubagent(
 	if (!sourceSessionFile)
 		return { status: "skipped", message: "source session file unavailable" } as const
 
+	const safeSource = sanitizeAgentName(sourceSessionName || "session")
+	const runName = `agent-roam-reflection-${runtime.agent}-from-${safeSource}-${Date.now()}`
+	const forkedSession = SessionManager.forkFrom(
+		sourceSessionFile,
+		ctx.sessionManager.getCwd(),
+		ctx.sessionManager.getSessionDir(),
+	)
+	forkedSession.appendSessionInfo(runName)
+	const reflectionSessionFile = forkedSession.getSessionFile()
+	if (!reflectionSessionFile)
+		return { status: "skipped", message: "failed to create reflection session" } as const
+
 	const env = {
 		...process.env,
 		AGENT_ROAM_KB_DIR: runtime.kbDir,
@@ -166,14 +178,12 @@ function launchReflectionSubagent(
 		AGENT_EMACS_SOCKET: runtime.socket,
 		AGENT_ROAM_REFLECTION_CHILD: "1",
 	}
-	const safeSource = sanitizeAgentName(sourceSessionName || "session")
-	const runName = `agent-roam-reflection-${runtime.agent}-from-${safeSource}-${Date.now()}`
 	const instruction = [
 		reflectionPrompt,
 		"",
 		"Reflect now over inherited session context and update durable memory with tools.",
 	].join("\n")
-	const args = ["-p", "--fork", sourceSessionFile, `/name ${runName}`, instruction]
+	const args = ["-p", "--session", reflectionSessionFile, instruction]
 	if (modelId)
 		args.push("--model", modelId)
 	const child = spawn("pi", args, {

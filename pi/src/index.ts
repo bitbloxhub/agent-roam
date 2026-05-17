@@ -159,10 +159,18 @@ function readSkillText() {
 	return readFileSync(skillPath, "utf8")
 }
 
+function parseJsonStringArray(raw: string) {
+	let parsed: unknown = JSON.parse(raw)
+	if (typeof parsed === "string")
+		parsed = JSON.parse(parsed)
+	if (!Array.isArray(parsed))
+		return [] as string[]
+	return parsed.filter((x): x is string => typeof x === "string")
+}
+
 function readSystemTaggedNotes(runtime: AgentRuntime) {
-	const lisp = "(let ((xs (agent-memory-find-by-tag \"system\"))) (princ (mapconcat #'identity xs \"\\n\")))"
-	const out = emacsEval(runtime, lisp).replace(/^"|"$/g, "")
-	const files = out.split("\n").map(s => s.trim()).filter(Boolean)
+	const out = emacsEval(runtime, "(princ (json-encode (agent-memory-find-by-tag \"system\")))")
+	const files = parseJsonStringArray(out)
 	const notes: string[] = []
 	for (const file of files) {
 		if (!existsSync(file))
@@ -174,8 +182,8 @@ function readSystemTaggedNotes(runtime: AgentRuntime) {
 }
 
 function readTagList(runtime: AgentRuntime) {
-	const out = emacsEval(runtime, "(princ (mapconcat #'identity (agent-memory-list-tags) \" \"))").replace(/^"|"$/g, "")
-	return out.trim()
+	const out = emacsEval(runtime, "(princ (json-encode (agent-memory-list-tags)))")
+	return parseJsonStringArray(out)
 }
 
 function launchReflectionSubagent(
@@ -316,7 +324,7 @@ export default function (pi: ExtensionAPI) {
 				throw new Error(`emacs daemon not ready (${health.reason}) socket=${rt.socket}`)
 			const skill = readSkillText()
 			let notes: string[] = []
-			let tags = ""
+			let tags: string[] = []
 			try {
 				notes = readSystemTaggedNotes(rt)
 			} catch {}
@@ -327,7 +335,7 @@ export default function (pi: ExtensionAPI) {
 				"# Agent-roam injected context",
 				skill ? `\n## Skill\n${skill}` : "",
 				"\n## KB git repo\nAGENT_ROAM_KB_DIR is always a git repo in this extension. Follow skill \"Git sync (optional)\" steps after memory edits and org-roam DB sync.",
-				tags ? `\n## Tag list\n${tags.split(/\\s+/).filter(Boolean).map(tag => `- \`${tag}\``).join("\\n")}` : "\n## Tag list\n(none)",
+				tags.length ? `\n## Tag list\n${tags.map(tag => `- \`${tag}\``).join("\n")}` : "\n## Tag list\n(none)",
 				notes.length ? `\n## System-tagged notes\n${notes.join("\n\n")}` : "\n## System-tagged notes\n(none)",
 			].join("\n")
 			return {

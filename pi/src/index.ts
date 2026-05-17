@@ -130,14 +130,14 @@ function ensureDaemon(runtime: AgentRuntime) {
 	)
 }
 
-async function waitForDaemonReady(runtime: AgentRuntime, tries = 20, delayMs = 100) {
+async function waitForDaemonReady(runtime: AgentRuntime, tries = 40, delayMs = 100) {
 	for (let i = 0; i < tries; i++) {
-		const check = run("emacsclient", ["-s", runtime.socket, "--eval", "t"])
-		if (check.status === 0)
-			return true
+		const ping = run("emacsclient", ["-s", runtime.socket, "--eval", "t"])
+		if (ping.status === 0)
+			return { ok: true, reason: "ok", semanticReady: true } as const
 		await new Promise(resolve => setTimeout(resolve, delayMs))
 	}
-	return false
+	return { ok: false, reason: "socket-unreachable", semanticReady: false } as const
 }
 
 function stopDaemon(runtime: AgentRuntime) {
@@ -300,7 +300,7 @@ export default function (pi: ExtensionAPI) {
 		try {
 			syncSelectedAgentFromSession(ctx)
 			const rt = startSessionRuntime()
-			ctx.ui.notify(`agent-roam ready | agent=${rt.agent} | socket=${rt.socket}`, "info")
+			ctx.ui.notify(`agent-roam bootstrapping | agent=${rt.agent} | socket=${rt.socket}`, "info")
 			updateRoamAgentStatus(rt.agent, ctx)
 		} catch (error) {
 			ctx.ui.notify(`agent-roam bootstrap failed: ${(error as Error).message}`, "error")
@@ -311,12 +311,18 @@ export default function (pi: ExtensionAPI) {
 		try {
 			syncSelectedAgentFromSession(ctx)
 			const rt = runtime ?? startSessionRuntime()
-			const ready = await waitForDaemonReady(rt)
-			if (!ready)
-				throw new Error("emacs daemon not ready")
+			const health = await waitForDaemonReady(rt)
+			if (!health.ok)
+				throw new Error(`emacs daemon not ready (${health.reason}) socket=${rt.socket}`)
 			const skill = readSkillText()
-			const notes = readSystemTaggedNotes(rt)
-			const tags = readTagList(rt)
+			let notes: string[] = []
+			let tags = ""
+			try {
+				notes = readSystemTaggedNotes(rt)
+			} catch {}
+			try {
+				tags = readTagList(rt)
+			} catch {}
 			const content = [
 				"# Agent-roam injected context",
 				skill ? `\n## Skill\n${skill}` : "",
@@ -337,9 +343,9 @@ export default function (pi: ExtensionAPI) {
 			return { cancel: true }
 		try {
 			const rt = runtime ?? startSessionRuntime()
-			const ready = await waitForDaemonReady(rt)
-			if (!ready)
-				throw new Error("emacs daemon not ready")
+			const health = await waitForDaemonReady(rt)
+			if (!health.ok)
+				throw new Error(`emacs daemon not ready (${health.reason}) socket=${rt.socket}`)
 			const modelRef = ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined
 			const result = launchReflectionSubagent(rt, ctx, pi.getSessionName() || "session", ctx.sessionManager.getSessionFile(), modelRef)
 			if (result.status === "launched")
@@ -390,9 +396,9 @@ export default function (pi: ExtensionAPI) {
 		handler: async (_args, ctx) => {
 			try {
 				const rt = runtime ?? startSessionRuntime()
-				const ready = await waitForDaemonReady(rt)
-				if (!ready)
-					throw new Error("emacs daemon not ready")
+				const health = await waitForDaemonReady(rt)
+				if (!health.ok)
+					throw new Error(`emacs daemon not ready (${health.reason}) socket=${rt.socket}`)
 				const modelRef = ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined
 				const result = launchReflectionSubagent(rt, ctx, pi.getSessionName() || "session", ctx.sessionManager.getSessionFile(), modelRef)
 				if (result.status === "launched")

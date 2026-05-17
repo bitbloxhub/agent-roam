@@ -37,7 +37,7 @@ function buildRuntime(cwd: string, agent: string): AgentRuntime {
 	const root = path.join(AGENT_ROOT, name)
 	const kbDir = path.join(root, "kb")
 	const stateDir = path.join(root, "state")
-	const initDir = path.join(cwd, "skills", "agent-roam", "init")
+	const initDir = path.join(PI_AGENT_DIR, "skills", "agent-roam", "init")
 	const socket = `agent-memory-${randomUUID().slice(0, 8)}`
 	return { agent: name, kbDir, stateDir, initDir, socket }
 }

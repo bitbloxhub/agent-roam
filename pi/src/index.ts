@@ -2,7 +2,7 @@ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-a
 import type { AutocompleteItem } from "@earendil-works/pi-tui"
 import { spawn, spawnSync } from "node:child_process"
 import { randomUUID } from "node:crypto"
-import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs"
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import process from "node:process"
 import { getAgentDir, SessionManager } from "@earendil-works/pi-coding-agent"
@@ -18,6 +18,8 @@ interface AgentRuntime {
 const MAX_NOTE_BYTES = 24_000
 const PI_AGENT_DIR = getAgentDir()
 const AGENT_ROOT = path.join(PI_AGENT_DIR, "..", "agent-roam")
+const LAST_AGENT_FILE = path.join(AGENT_ROOT, ".last-agent")
+const SESSION_AGENT_CUSTOM_TYPE = "agent-roam:selected-agent"
 
 function sanitizeAgentName(raw: string) {
 	return raw.trim().replace(/[^\w.-]/g, "-") || "default"
@@ -30,6 +32,39 @@ function listAgentNames() {
 		.filter(d => d.isDirectory())
 		.map(d => d.name)
 		.sort()
+}
+
+function readLastSelectedAgent() {
+	if (!existsSync(LAST_AGENT_FILE))
+		return undefined
+	const raw = readFileSync(LAST_AGENT_FILE, "utf8").trim()
+	if (!raw)
+		return undefined
+	return sanitizeAgentName(raw)
+}
+
+function writeLastSelectedAgent(agent: string) {
+	mkdirSync(AGENT_ROOT, { recursive: true })
+	writeFileSync(LAST_AGENT_FILE, `${sanitizeAgentName(agent)}\n`, "utf8")
+}
+
+function getAgentFromSessionEntries(entries: ReturnType<ExtensionContext["sessionManager"]["getEntries"]>) {
+	for (let i = entries.length - 1; i >= 0; i--) {
+		const entry = entries[i] as { type: string, customType?: string, data?: unknown }
+		if (entry.type !== "custom" || entry.customType !== SESSION_AGENT_CUSTOM_TYPE)
+			continue
+		const data = entry.data as { agent?: string } | undefined
+		if (typeof data?.agent === "string" && data.agent.trim())
+			return sanitizeAgentName(data.agent)
+	}
+	return undefined
+}
+
+function appendSessionAgent(sessionFile: string | undefined, sessionDir: string, agent: string) {
+	if (!sessionFile)
+		return
+	const manager = SessionManager.open(sessionFile, sessionDir)
+	manager.appendCustomEntry(SESSION_AGENT_CUSTOM_TYPE, { agent: sanitizeAgentName(agent) })
 }
 
 function buildRuntime(agent: string): AgentRuntime {
@@ -215,7 +250,7 @@ function getAgentCompletions(prefix: string, currentAgent: string): Autocomplete
 
 export default function (pi: ExtensionAPI) {
 	let runtime: AgentRuntime | null = null
-	let selectedAgent = "default"
+	let selectedAgent = readLastSelectedAgent() ?? "default"
 
 	function startSessionRuntime() {
 		if (runtime)
@@ -230,8 +265,17 @@ export default function (pi: ExtensionAPI) {
 		ctx.ui.setStatus("agent-roam-agent", ctx.ui.theme.fg("dim", `roam agent: ${currentAgent}`))
 	}
 
+	function syncSelectedAgentFromSession(ctx: ExtensionContext) {
+		const sessionAgent = getAgentFromSessionEntries(ctx.sessionManager.getEntries())
+		selectedAgent = sessionAgent ?? readLastSelectedAgent() ?? selectedAgent
+		writeLastSelectedAgent(selectedAgent)
+		if (!sessionAgent)
+			appendSessionAgent(ctx.sessionManager.getSessionFile(), ctx.sessionManager.getSessionDir(), selectedAgent)
+	}
+
 	pi.on("session_start", async (_event, ctx) => {
 		try {
+			syncSelectedAgentFromSession(ctx)
 			const rt = startSessionRuntime()
 			ctx.ui.notify(`agent-roam ready | agent=${rt.agent} | socket=${rt.socket}`, "info")
 			updateRoamAgentStatus(rt.agent, ctx)
@@ -242,6 +286,7 @@ export default function (pi: ExtensionAPI) {
 
 	pi.on("before_agent_start", async (event, ctx) => {
 		try {
+			syncSelectedAgentFromSession(ctx)
 			const rt = runtime ?? startSessionRuntime()
 			const ready = await waitForDaemonReady(rt)
 			if (!ready)
@@ -296,6 +341,8 @@ export default function (pi: ExtensionAPI) {
 		getArgumentCompletions: prefix => getAgentCompletions(prefix, selectedAgent),
 		handler: async (args, ctx) => {
 			selectedAgent = sanitizeAgentName(args || "default")
+			writeLastSelectedAgent(selectedAgent)
+			appendSessionAgent(ctx.sessionManager.getSessionFile(), ctx.sessionManager.getSessionDir(), selectedAgent)
 			runtime = startSessionRuntime()
 			ctx.ui.notify(`agent-roam switched to ${runtime.agent} | socket=${runtime.socket}`, "info")
 			updateRoamAgentStatus(runtime.agent, ctx)

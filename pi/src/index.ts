@@ -273,6 +273,29 @@ export default function (pi: ExtensionAPI) {
 			appendSessionAgent(ctx.sessionManager.getSessionFile(), ctx.sessionManager.getSessionDir(), selectedAgent)
 	}
 
+	function getRoamStatusLines(ctx: ExtensionContext) {
+		const rt = runtime ?? buildRuntime(selectedAgent)
+		const daemonCheck = run("emacsclient", ["-s", rt.socket, "--eval", "t"])
+		const emacsclientCheck = run("emacsclient", ["--version"])
+		const sessionFile = ctx.sessionManager.getSessionFile()
+		const sessionAgent = getAgentFromSessionEntries(ctx.sessionManager.getEntries()) ?? "(none)"
+		const lastAgent = readLastSelectedAgent() ?? "(none)"
+		return [
+			`agent=${selectedAgent}`,
+			`runtime.agent=${rt.agent}`,
+			`session.agent=${sessionAgent}`,
+			`last-agent=${lastAgent}`,
+			`daemon.ready=${daemonCheck.status === 0 ? "yes" : "no"}`,
+			`emacsclient=${emacsclientCheck.status === 0 ? "ok" : "missing"}`,
+			`kb.dir=${rt.kbDir} (${existsSync(rt.kbDir) ? "ok" : "missing"})`,
+			`state.dir=${rt.stateDir} (${existsSync(rt.stateDir) ? "ok" : "missing"})`,
+			`socket=${rt.socket}`,
+			`session.name=${ctx.sessionManager.getSessionName() ?? "(none)"}`,
+			`session.id=${ctx.sessionManager.getSessionId()}`,
+			`session.file=${sessionFile ?? "(none)"}`,
+		]
+	}
+
 	pi.on("session_start", async (_event, ctx) => {
 		try {
 			syncSelectedAgentFromSession(ctx)
@@ -346,6 +369,19 @@ export default function (pi: ExtensionAPI) {
 			runtime = startSessionRuntime()
 			ctx.ui.notify(`agent-roam switched to ${runtime.agent} | socket=${runtime.socket}`, "info")
 			updateRoamAgentStatus(runtime.agent, ctx)
+		},
+	})
+
+	pi.registerCommand("roam-status", {
+		description: "Show agent-roam runtime and health status",
+		handler: async (_args, ctx) => {
+			try {
+				syncSelectedAgentFromSession(ctx)
+				const lines = getRoamStatusLines(ctx)
+				ctx.ui.notify(`agent-roam status\n${lines.join("\n")}`, "info")
+			} catch (error) {
+				ctx.ui.notify(`agent-roam status failed: ${(error as Error).message}`, "error")
+			}
 		},
 	})
 

@@ -85,6 +85,7 @@ Prefer tags already present in Org-roam DB (`agent-memory-list-tags`).
 
 Write memory only when durable and likely reused:
 - If user explicitly asks to remember something, you must persist it in Org-roam (create or update note), not just acknowledge it
+- After persisting a user memory request, confirm what was saved (note title and file path)
 - Preferences, decisions, architecture, machine/repo setup
 - Repeated corrections
 - Unresolved threads worth resuming

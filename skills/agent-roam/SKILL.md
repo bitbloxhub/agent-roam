@@ -79,6 +79,7 @@ Prefer tags already present in Org-roam DB (`agent-memory-list-tags`).
 - If `:system:` note count exceeds soft max, review and demote least-critical notes first
 - Do not use `:system:` for transient session details or one-off task logs
 - Do not use `:system:` for most preferences/decisions that should be discovered via regular memory queries (including tag queries like `agent-memory-find-by-tag`)
+- Periodically merge/rename near-duplicate tags to keep retrieval clean
 
 ## Writing policy
 

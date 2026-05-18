@@ -103,6 +103,7 @@ Before new node, search existing notes first.
 - Create new node if distinct concept
 - Record conflicts explicitly
 - Record user corrections explicitly
+- For project-specific preferences, create/update a dedicated project note with project-name tag (e.g. `:my-project:`), instead of mixing into global preference notes.
 
 ## Paths and bootstrap
 

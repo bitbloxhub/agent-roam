@@ -9,6 +9,9 @@
 		"@earendil-works/pi-coding-agent": "^0.74.0",
 		"@earendil-works/pi-tui": "^0.74.0"
 	},
+	"dependencies": {
+		"zod": "catalog:"
+	},
 	"devDependencies": {
 		"@earendil-works/pi-coding-agent": "catalog:",
 		"@earendil-works/pi-tui": "catalog:",

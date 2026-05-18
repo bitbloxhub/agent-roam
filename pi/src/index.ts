@@ -6,6 +6,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import path from "node:path"
 import process from "node:process"
 import { getAgentDir, SessionManager } from "@earendil-works/pi-coding-agent"
+import { z } from "zod"
 
 interface AgentRuntime {
 	agent: string
@@ -245,17 +246,13 @@ function launchReflectionSubagent(
 	return { status: "launched", message: `reflection launched (${runName})` } as const
 }
 
-interface AgentRoamSettings {
-	reflection: {
-		onCompaction: boolean
-	}
-}
+const agentRoamSettingsSchema = z.object({
+	reflection: z.object({
+		onCompaction: z.boolean().default(true),
+	}).prefault({}),
+})
 
-const DEFAULT_AGENT_ROAM_SETTINGS: AgentRoamSettings = {
-	reflection: {
-		onCompaction: true,
-	},
-}
+type AgentRoamSettings = z.infer<typeof agentRoamSettingsSchema>
 
 let cachedSettings: AgentRoamSettings | null = null
 
@@ -263,30 +260,20 @@ function readAgentRoamSettings(): AgentRoamSettings {
 	if (cachedSettings)
 		return cachedSettings
 
+	const fallback = () => agentRoamSettingsSchema.parse({})
+
 	try {
 		const settingsPath = path.join(PI_AGENT_DIR, "settings.json")
 		if (!existsSync(settingsPath)) {
-			cachedSettings = DEFAULT_AGENT_ROAM_SETTINGS
+			cachedSettings = fallback()
 			return cachedSettings
 		}
-		const parsed = JSON.parse(readFileSync(settingsPath, "utf8")) as {
-			agentRoam?: {
-				reflection?: {
-					onCompaction?: unknown
-				}
-			}
-		}
-		const onCompaction = parsed.agentRoam?.reflection?.onCompaction
-		cachedSettings = {
-			reflection: {
-				onCompaction: typeof onCompaction === "boolean"
-					? onCompaction
-					: DEFAULT_AGENT_ROAM_SETTINGS.reflection.onCompaction,
-			},
-		}
+
+		const raw = JSON.parse(readFileSync(settingsPath, "utf8")) as { agentRoam?: unknown }
+		cachedSettings = agentRoamSettingsSchema.parse(raw.agentRoam ?? {})
 		return cachedSettings
 	} catch {
-		cachedSettings = DEFAULT_AGENT_ROAM_SETTINGS
+		cachedSettings = fallback()
 		return cachedSettings
 	}
 }

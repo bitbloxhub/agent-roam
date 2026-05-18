@@ -15,6 +15,13 @@ description: >
 - Touch normal zettelkasten only with explicit user request or later promotion flow
 - Use memory for continuity, not to override current user message
 
+## Using user zettelkasten
+
+- Default: do not edit user zettelkasten
+- Edit user zettelkasten only when user explicitly asks
+- When editing user zettelkasten, do not use or define functions declared in `init/init.el`
+- When editing user zettelkasten, read `init/init.el` directly and use the Elisp contained there manually when needed
+
 ## Search policy
 
 Search memory when likely useful:

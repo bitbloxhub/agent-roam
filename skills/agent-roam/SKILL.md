@@ -2,7 +2,7 @@
 name: agent-roam
 description: >
   Agent-only Org-roam memory skill. Uses separate Emacs init, daemon, KB dir, and
-  org-roam DB. Main workflow uses rg + edit tools; emacsclient only for Org-roam semantics.
+  org-roam DB. Search via emacs tag query when tags exist; use rg for text search; edit tool for file edits.
 ---
 
 # Agent Roam Skill
@@ -42,7 +42,7 @@ Skip memory search when not useful:
 
 Search patterns:
 - Text search: `rg -n "query terms" "$AGENT_ROAM_KB_DIR"`
-- Tag search (via Emacs): `emacsclient -s "$AGENT_EMACS_SOCKET" --eval '(agent-memory-find-by-tag "tag")'`
+- Tag search (via Emacs, recommended way to search if tags exist): `emacsclient -s "$AGENT_EMACS_SOCKET" --eval '(agent-memory-find-by-tag "tag")'`
 
 ## Org-roam conventions
 

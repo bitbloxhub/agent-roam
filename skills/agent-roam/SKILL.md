@@ -67,6 +67,9 @@ After direct file edits, run org-roam sync command.
 ## Tag policy
 
 - Prefer existing tags, avoid near-duplicates
+- Tag notes carefully for reliable retrieval; poor tagging makes memory query quality worse
+- Err on side of more tags for recall quality; at minimum add one good tag
+- Feel free to create new tags when existing tags do not fit well
 - Tags are coarse hints; detail belongs in title/body
 - If uncertain, use `candidate`
 

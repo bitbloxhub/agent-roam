@@ -122,12 +122,13 @@ Use manual bootstrap only if agent harness does not auto-bootstrap daemon/env.
 - Example:
   - `emacsclient -s "$AGENT_EMACS_SOCKET" --eval '(agent-memory-create-node "My note title" ":project:nix:" "initial body")'`
 
-3. Ensure/open today daily note file
-- Emacs fn: `agent-memory-capture-daily`
-- Use this only to create/open daily file metadata
-- Write daily content with normal edit tool, then sync
-- Example create/open:
-  - `emacsclient -s "$AGENT_EMACS_SOCKET" --eval '(agent-memory-capture-daily ":session:")'`
+3. Ensure/open target daily note file
+- Emacs fn (preferred): `agent-memory-ensure-daily-file` (non-interactive, agent-safe)
+- Use only `agent-memory-ensure-daily-file` for daily creation/open in automation
+- Avoid interactive daily capture/find functions in agent runs (`org-roam-dailies-capture-*`, `org-roam-dailies-find-*`), which can block `emacsclient`
+- Example:
+  - `emacsclient -s "$AGENT_EMACS_SOCKET" --eval '(agent-memory-ensure-daily-file (list 5 16 2026) ":session:")'`
+- DB sync is handled by helper; explicit sync still OK if needed
 
 4. Add ID to heading
 - Emacs fn: `agent-memory-add-id-to-heading`

@@ -67,11 +67,16 @@ After direct file edits, run org-roam sync command.
 ## Tag policy
 
 - Prefer existing tags, avoid near-duplicates
-- Tag notes aggressively for retrieval quality; poor tagging makes memory query quality worse
-- Apply as many relevant tags as possible for each note (topic, project, tool, status, preference/decision type, etc.)
-- Aim for multiple tags when applicable; avoid under-tagging
-- Reuse existing canonical tags when they clearly match, and proactively create new relevant tags for new concepts; avoid near-duplicate variants to prevent fragmentation
-- Project-scoped notes must include `:project:` plus exact project tag (e.g. `:skills-flake:`); do not use only umbrella tags like `:skills:`
+- Tag aggressively enough for recall, but keep tags high-signal for precision
+- Use ~3–6 tags per note when practical; avoid both under-tagging and noisy over-tagging
+- Each tag must add distinct retrieval value (no redundant synonyms)
+- Prefer this schema:
+  - topic (what): e.g. `web-search`, `nix`, `git`, `debugging`
+  - artifact/system (where): e.g. `readme`, `home-manager`, `agent-roam`
+  - method/constraint (how): e.g. `fallback`, `rate-limit`, `captcha`, `json-api`
+  - project scope (when project-specific): MUST include exact project tag (e.g. `:skills-flake:`)
+- Avoid low-signal tags (e.g. generic `docs`, `scan`, `notes`) unless genuinely primary retrieval keys
+- Reuse canonical tags when they clearly match; create new tags only when they add real retrieval value
 - Tags are coarse hints; detail belongs in title/body
 - If uncertain, use `candidate`
 

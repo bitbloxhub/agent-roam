@@ -67,9 +67,11 @@ After direct file edits, run org-roam sync command.
 ## Tag policy
 
 - Prefer existing tags, avoid near-duplicates
-- Tag notes carefully for reliable retrieval; poor tagging makes memory query quality worse
-- Err on side of more tags for recall quality; at minimum add one good tag
-- Feel free to create new tags when existing tags do not fit well
+- Tag notes aggressively for retrieval quality; poor tagging makes memory query quality worse
+- Apply as many relevant tags as possible for each note (topic, project, tool, status, preference/decision type, etc.)
+- Aim for multiple tags when applicable; avoid under-tagging
+- Reuse existing canonical tags when they clearly match, and proactively create new relevant tags for new concepts; avoid near-duplicate variants to prevent fragmentation
+- Project-scoped notes must include `:project:` plus exact project tag (e.g. `:skills-flake:`); do not use only umbrella tags like `:skills:`
 - Tags are coarse hints; detail belongs in title/body
 - If uncertain, use `candidate`
 

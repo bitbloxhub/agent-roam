@@ -40,9 +40,12 @@ Skip memory search when not useful:
 - Pure rewriting/creative tasks
 - Cases where current context is sufficient
 
-Search patterns:
-- Text search: `rg -n "query terms" "$AGENT_ROAM_KB_DIR"`
-- Tag search (via Emacs, recommended way to search if tags exist): `emacsclient -s "$AGENT_EMACS_SOCKET" --eval '(agent-memory-find-by-tag "tag")'`
+Search order (mandatory):
+1. Tag search first (Emacs): `agent-memory-find-by-tag`
+2. Use `rg` text search only when:
+   - no relevant tag exists, or
+   - tag search returned insufficient results
+- Do not start with `rg` when tag route is available
 
 ## Org-roam conventions
 

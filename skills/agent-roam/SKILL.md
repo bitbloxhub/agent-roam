@@ -24,21 +24,31 @@ description: >
 
 ## Search policy
 
-Search memory when likely useful:
-- Default bias: query memory before answering whenever continuity might matter; if uncertain, run tag query first (do not skip based on confidence)
-- HARD RULE: if relevant tag exists for current topic/task, MUST query that tag via `agent-memory-find-by-tag` before answering, unless already queried earlier in current task
-- Stable preferences
-- Prior decisions
-- Long-running project state
-- Named repos/machines/tools/workflows
-- Repeated user corrections
-- Unresolved threads
+Search memory first when relevant:
+- If relevant tag exists, MUST query `agent-memory-find-by-tag` before answering, unless already queried in current task.
+- AGENTS.md, system/developer prompt, repo files, injected context, current chat, or confidence are NOT enough reason to skip memory retrieval.
+- If memory states a preference, decision, or constraint, MUST follow it unless user explicitly overrides it in current message.
+- If required memory search was skipped, acknowledge miss, query memory next, then revise answer.
+- Never treat task as too simple for memory.
 
-Skip memory search when not useful:
-- Generic factual questions
-- One-off coding tasks with enough local context
-- Pure rewriting/creative tasks
-- Cases where current context is sufficient
+Examples:
+- User asks for commit message; tags like `commit`, `git`, or user/project tag exist -> query memory first.
+- AGENTS.md already says conventional commits, but matching memory tag exists -> still query memory, then follow memory.
+- Current chat mentions user preference, but memory also has that preference -> query memory if relevant tag exists; memory remains source of truth unless user overrides now.
+
+```text
+# BAD: answers from AGENTS.md alone
+user: Commit message?
+agent: chore: update lockfile
+
+> skipped required memory query
+
+# GOOD: queries memory first, then answers
+user: Commit message?
+tool/bash: emacsclient -s "$AGENT_EMACS_SOCKET" --eval '(agent-memory-find-by-tag "commit")'
+tool/bash: emacsclient -s "$AGENT_EMACS_SOCKET" --eval '(agent-memory-find-by-tag "git")'
+agent: chore: sync agent-roam preference source
+```
 
 Search order (mandatory):
 1. Tag search first (Emacs): `agent-memory-find-by-tag`

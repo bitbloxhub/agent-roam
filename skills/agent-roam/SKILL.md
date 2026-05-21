@@ -25,8 +25,8 @@ description: >
 ## Search policy
 
 Search memory when likely useful:
-- Default bias: query memory frequently when continuity may matter; when unsure, do quick memory query
-- If a relevant tag exists for current topic, always query notes with that tag via `agent-memory-find-by-tag`, unless already queried earlier in current task
+- Default bias: query memory before answering whenever continuity might matter; if uncertain, run tag query first (do not skip based on confidence)
+- HARD RULE: if relevant tag exists for current topic/task, MUST query that tag via `agent-memory-find-by-tag` before answering, unless already queried earlier in current task
 - Stable preferences
 - Prior decisions
 - Long-running project state

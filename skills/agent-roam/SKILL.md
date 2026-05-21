@@ -81,6 +81,10 @@ After direct file edits, run org-roam sync command.
 - If uncertain, use `candidate`
 
 Prefer tags already present in Org-roam DB (`agent-memory-list-tags`).
+- Tag source of truth: system note titled `Agent memory tag taxonomy and governance`
+- HARD RULE: never write a note using a tag not documented in taxonomy system note
+- If creating a new tag, you MUST first update taxonomy system note with one-line description, then use tag in other notes
+- If taxonomy note cannot be updated in current run, do not create/use new tag; fall back to existing tags only
 - Use `:system:` only when note must be auto-injected as persistent system context
 - For `:system:` notes, keep soft max 8–12 notes and hard max 20 notes
 - If `:system:` note count exceeds soft max, review and demote least-critical notes first

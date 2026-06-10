@@ -59,8 +59,9 @@ Search order (mandatory):
 
 ## Org-roam conventions
 
-- Memory files are normal Org-roam notes
-- One focused durable concept per node when practical
+- Durable memory usually lives in normal Org-roam notes
+- Dailies are primary work journal and default inbox for ongoing work
+- One focused durable concept per promoted node when practical
 - `#+title:` required
 - `#+filetags:` coarse retrieval tags
 - Org IDs created/ensured by Emacs helpers
@@ -72,6 +73,7 @@ Use edit tools for normal text edits.
 
 Use emacsclient helpers only for semantic ops:
 - Create node file
+- Ensure/open daily file
 - Ensure Org ID / normalize file metadata
 - Sync org-roam DB
 
@@ -91,7 +93,6 @@ After direct file edits, run org-roam sync command.
 - Avoid low-signal tags (e.g. generic `docs`, `scan`, `notes`) unless genuinely primary retrieval keys
 - Reuse canonical tags when they clearly match; create new tags only when they add real retrieval value
 - Tags are coarse hints; detail belongs in title/body
-- If uncertain, use `candidate`
 
 Prefer tags already present in Org-roam DB (`agent-memory-list-tags`).
 - Tag source of truth: system note titled `Agent memory tag taxonomy and governance`
@@ -114,7 +115,13 @@ Write memory only when durable and likely reused:
 - Repeated corrections
 - Unresolved threads worth resuming
 
-Do not store:
+Default journal-first policy:
+- Most work notes, partial thoughts, debugging traces, and session-local observations should stay in dailies
+- Dailies should err on side of being a journal of work, not a backlog of future nodes
+- Promote to node only when information is durable and likely reused across sessions
+- Promotion path: use `agent-memory-add-id-to-heading` on a daily heading when that heading has become durable memory
+
+Do not store as promoted memory nodes:
 - Transient execution details
 - Obvious facts
 - Guesses stated as facts
@@ -129,6 +136,40 @@ Before new node, search existing notes first.
 - Record user corrections explicitly
 - For project-specific preferences, create/update a dedicated project note with project-name tag (e.g. `:my-project:`), instead of mixing into global preference notes.
 
+Examples:
+
+```text
+# BAD: create durable node for one-off work log
+user: investigate why tests flaky today
+agent: creates new note "Flaky tests investigation" with tentative guesses
+
+> over-promoted transient work; should stay in daily journal unless pattern/decision becomes durable
+
+# BAD: create no note at all for meaningful work trail
+user: investigate why tests flaky today
+agent: reports findings in chat only and records nothing in daily
+
+> loses useful session trail; default should be daily journal even when no durable node is warranted
+
+# GOOD: keep work trail in daily
+user: investigate why tests flaky today
+agent: appends findings, commands tried, and tentative hypotheses to today's daily
+
+> correct default: work journal stays in daily; no durable node needed unless pattern later proves reusable
+
+# BAD: create standalone note for maybe-useful thought
+agent: creates a new note with one speculative bullet
+
+> speculative one-offs add retrieval noise; use daily instead
+
+# GOOD: promote after durability becomes clear
+day 1 daily heading: "pnpm lint fails unless env var set"
+day 3 same issue recurs and user confirms it is repo constraint
+agent: `agent-memory-add-id-to-heading` on that heading
+
+> promotion is normal when later evidence shows note is durable; it is just not step one
+```
+
 ## Paths and bootstrap
 
 Bootstrap details live in `manual_bootstrap.md`.
@@ -140,9 +181,10 @@ Use manual bootstrap only if agent harness does not auto-bootstrap daemon/env.
 - Emacs fn: `agent-memory-list-tags`
 - Example: `emacsclient -s "$AGENT_EMACS_SOCKET" --eval '(agent-memory-list-tags)'`
 
-2. Capture note with name
+2. Capture durable note with name
 - Emacs fn: `agent-memory-create-node`
 - Tags arg format: `:tag1:tag2:`
+- Use when creating a real durable node, not for routine work journaling
 - Example:
   - `emacsclient -s "$AGENT_EMACS_SOCKET" --eval '(agent-memory-create-node "My note title" ":project:nix:" "initial body")'`
 
@@ -150,12 +192,14 @@ Use manual bootstrap only if agent harness does not auto-bootstrap daemon/env.
 - Emacs fn (preferred): `agent-memory-ensure-daily-file` (non-interactive, agent-safe)
 - Use only `agent-memory-ensure-daily-file` for daily creation/open in automation
 - Avoid interactive daily capture/find functions in agent runs (`org-roam-dailies-capture-*`, `org-roam-dailies-find-*`), which can block `emacsclient`
+- After helper returns file path, use normal `edit` tool for daily content
 - Example:
   - `emacsclient -s "$AGENT_EMACS_SOCKET" --eval '(agent-memory-ensure-daily-file (list 5 16 2026) ":session:")'`
 - DB sync is handled by helper; explicit sync still OK if needed
 
 4. Add ID to heading
 - Emacs fn: `agent-memory-add-id-to-heading`
+- Main promotion path: promote durable daily heading into Org-roam node in place
 - Example current heading:
   - `emacsclient -s "$AGENT_EMACS_SOCKET" --eval '(with-current-buffer (find-file-noselect "/path/note.org") (goto-char (point-min)) (re-search-forward "^\\* Heading") (agent-memory-add-id-to-heading))'`
 - Example by file + heading text:

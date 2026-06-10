@@ -21,6 +21,8 @@ Capture durable memory only:
 3. Durable project facts/constraints/decisions
 4. Conflicts with existing memory that should be reconciled
 
+Default bias: dailies are journal of work. Do not promote routine work logs, tentative thoughts, or one-off investigation notes into durable nodes.
+
 Do **not** store secrets, tokens, ephemeral logs, one-off debug details, transient paths/ports, or transcript dumps.
 
 Convert relative time to absolute date when written.
@@ -43,6 +45,7 @@ Filter each candidate:
 - Already captured vs new
 - Generalizable vs one-off
 - Contradiction with existing memory
+- Better kept as daily journal vs true durable node
 
 If nothing durable survives, produce no updates.
 
@@ -51,7 +54,7 @@ If nothing durable survives, produce no updates.
 For each selected learning:
 
 - If matching note exists, update it
-- Else create focused new note
+- Else create focused new note or promote existing daily heading
 - Keep one focused concept per note when practical
 - Keep notes concise
 - Use coarse filetags
@@ -62,6 +65,10 @@ Use these semantic operations when writing:
 
 - Create node:
   - `emacsclient -s "$AGENT_EMACS_SOCKET" --eval '(agent-memory-create-node "<title>" ":tag1:tag2:" "<body>")'`
+- Ensure/open daily file, then use normal edit tool for journal content:
+  - `emacsclient -s "$AGENT_EMACS_SOCKET" --eval '(agent-memory-ensure-daily-file (list 5 16 2026) ":session:")'`
+- Promote durable daily heading in place:
+  - `emacsclient -s "$AGENT_EMACS_SOCKET" --eval '(agent-memory-add-id-to-heading "/path/to/daily.org" "Heading")'`
 - Sync DB after edits:
   - `emacsclient -s "$AGENT_EMACS_SOCKET" --eval '(org-roam-db-sync)'`
 
@@ -70,6 +77,10 @@ Use these semantic operations when writing:
 - Remove stale/contradictory memory
 - Avoid duplicate notes
 - Ensure tag quality and naming clarity
+
+Reminder: default to daily journal when unsure.
+- Routine work logs, tentative ideas, and one-off investigations stay in dailies
+- Promote with `agent-memory-add-id-to-heading` only after durability becomes clear
 
 ### Phase 5 — Git Sync (optional)
 

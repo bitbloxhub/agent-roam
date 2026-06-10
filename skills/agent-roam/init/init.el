@@ -95,9 +95,10 @@
   (org-roam-db-sync)
   org-roam-db-location)
 
-(defun agent-memory-create-node (title tags &optional body)
-  "Create agent memory node with TITLE TAGS BODY. Return file path."
-  (interactive "sTitle: \nsTags (:tag1:tag2:): \nsBody: ")
+(defun agent-memory-create-node (title tags)
+  "Create agent memory node file with TITLE and TAGS. Return file path.
+Write note content separately with normal edit tool."
+  (interactive "sTitle: \nsTags (:tag1:tag2:): ")
   (let* ((ts (format-time-string "%Y%m%d%H%M%S"))
          (slug (agent-memory--slugify title))
          (file
@@ -109,10 +110,6 @@
       (insert (format "#+title: %s\n" title))
       (insert (agent-memory--tags-line tag-list))
       (insert "\n")
-      (when (and body (> (length body) 0))
-        (insert body)
-        (unless (string-suffix-p "\n" body)
-          (insert "\n")))
       (goto-char (point-min))
       (org-id-get-create)
       (save-buffer))

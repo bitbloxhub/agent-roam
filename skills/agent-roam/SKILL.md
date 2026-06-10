@@ -181,12 +181,13 @@ Use manual bootstrap only if agent harness does not auto-bootstrap daemon/env.
 - Emacs fn: `agent-memory-list-tags`
 - Example: `emacsclient -s "$AGENT_EMACS_SOCKET" --eval '(agent-memory-list-tags)'`
 
-2. Capture durable note with name
+2. Create durable note file
 - Emacs fn: `agent-memory-create-node`
 - Tags arg format: `:tag1:tag2:`
 - Use when creating a real durable node, not for routine work journaling
+- After helper returns file path, use normal `edit` tool for note content
 - Example:
-  - `emacsclient -s "$AGENT_EMACS_SOCKET" --eval '(agent-memory-create-node "My note title" ":project:nix:" "initial body")'`
+  - `emacsclient -s "$AGENT_EMACS_SOCKET" --eval '(agent-memory-create-node "My note title" ":project:nix:")'`
 
 3. Ensure/open target daily note file
 - Emacs fn (preferred): `agent-memory-ensure-daily-file` (non-interactive, agent-safe)

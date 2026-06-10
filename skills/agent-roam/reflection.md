@@ -63,8 +63,8 @@ For each selected learning:
 
 Use these semantic operations when writing:
 
-- Create node:
-  - `emacsclient -s "$AGENT_EMACS_SOCKET" --eval '(agent-memory-create-node "<title>" ":tag1:tag2:" "<body>")'`
+- Create node file, then use normal edit tool for content:
+  - `emacsclient -s "$AGENT_EMACS_SOCKET" --eval '(agent-memory-create-node "<title>" ":tag1:tag2:")'`
 - Ensure/open daily file, then use normal edit tool for journal content:
   - `emacsclient -s "$AGENT_EMACS_SOCKET" --eval '(agent-memory-ensure-daily-file (list 5 16 2026) ":session:")'`
 - Promote durable daily heading in place:

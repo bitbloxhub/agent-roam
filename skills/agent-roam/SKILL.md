@@ -172,8 +172,41 @@ agent: `agent-memory-add-id-to-heading` on that heading
 
 ## Paths and bootstrap
 
-Bootstrap details live in `manual_bootstrap.md`.
 Use manual bootstrap only if agent harness does not auto-bootstrap daemon/env.
+
+Manual bootstrap fallback:
+
+Required env vars:
+- `AGENT_ROAM_KB_DIR`
+- `AGENT_ROAM_STATE_DIR`
+- `AGENT_EMACS_SOCKET`
+
+Example values:
+- `AGENT_ROAM_KB_DIR=~/org/agent-roam`
+- `AGENT_ROAM_STATE_DIR=~/.local/state/agent-roam`
+- `AGENT_EMACS_SOCKET=agent-memory`
+
+Start daemon:
+
+```bash
+mkdir -p "$AGENT_ROAM_KB_DIR" "$AGENT_ROAM_STATE_DIR"
+
+AGENT_ROAM_KB_DIR="$AGENT_ROAM_KB_DIR" \
+AGENT_ROAM_STATE_DIR="$AGENT_ROAM_STATE_DIR" \
+emacs --init-directory /absolute/path/to/agent-roam/skills/agent-roam/init --daemon="$AGENT_EMACS_SOCKET"
+```
+
+Verify wiring:
+
+```bash
+emacsclient -s "$AGENT_EMACS_SOCKET" --eval '(list org-roam-directory org-roam-db-location package-user-dir custom-file)'
+```
+
+Stop daemon:
+
+```bash
+emacsclient -s "$AGENT_EMACS_SOCKET" -e '(kill-emacs)'
+```
 
 ## Required utility operations
 

@@ -118,6 +118,12 @@ Write memory only when durable and likely reused:
 Default journal-first policy:
 - Most work notes, partial thoughts, debugging traces, and session-local observations should stay in dailies
 - Dailies should err on side of being a journal of work, not a backlog of future nodes
+- For meaningful multi-step work, you MUST append concise headings to today's daily during the session
+- Do not wait for reflection to record ordinary work trail
+- Chat response alone is not enough when meaningful work happened
+- For work journaling, prefer concise subheadings that summarize actions, decisions, or state changes
+- Add brief supporting text under a heading when needed for clarity, context, or follow-up
+- Use `TODO` and `DONE` headings when tracking planned work, completed work, or implementation milestones
 - Promote to node only when information is durable and likely reused across sessions
 - Promotion path: use `agent-memory-add-id-to-heading` on a daily heading when that heading has become durable memory
 
@@ -145,17 +151,23 @@ agent: creates new note "Flaky tests investigation" with tentative guesses
 
 > over-promoted transient work; should stay in daily journal unless pattern/decision becomes durable
 
-# BAD: create no note at all for meaningful work trail
+# BAD: only answer in chat
 user: investigate why tests flaky today
-agent: reports findings in chat only and records nothing in daily
+agent: explains findings in chat and records nothing in daily
 
-> loses useful session trail; default should be daily journal even when no durable node is warranted
+> wrong: meaningful work happened; daily journal entry required
 
-# GOOD: keep work trail in daily
+# GOOD: journal during work
 user: investigate why tests flaky today
-agent: appends findings, commands tried, and tentative hypotheses to today's daily
+agent: appends headings like `** Tested flaky test reproducer.` and `** Compared failing runs across environments.` to today's daily
+agent: answers in chat
 
-> correct default: work journal stays in daily; no durable node needed unless pattern later proves reusable
+> correct: chat communicates result; daily preserves work trail
+
+# BAD: wait for reflection to record work
+agent: plans to let reflection capture this later
+
+> wrong: reflection is not substitute for routine work journaling
 
 # BAD: create standalone note for maybe-useful thought
 agent: creates a new note with one speculative bullet
@@ -167,7 +179,7 @@ day 1 daily heading: "pnpm lint fails unless env var set"
 day 3 same issue recurs and user confirms it is repo constraint
 agent: `agent-memory-add-id-to-heading` on that heading
 
-> promotion is normal when later evidence shows note is durable; it is just not step one
+> promotion is separate from routine journaling and happens once durability is clear
 ```
 
 ## Paths and bootstrap

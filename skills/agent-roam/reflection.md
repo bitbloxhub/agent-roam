@@ -66,7 +66,8 @@ Use these semantic operations when writing:
 - Create node file, then use normal edit tool for content:
   - `emacsclient -s "$AGENT_EMACS_SOCKET" --eval '(agent-memory-create-node "<title>" ":tag1:tag2:")'`
 - Ensure/open daily file, then use normal edit tool for journal content:
-  - `emacsclient -s "$AGENT_EMACS_SOCKET" --eval '(agent-memory-ensure-daily-file (list 5 16 2026) ":session:")'`
+  - new daily files use `#+filetags: :session:`
+  - `emacsclient -s "$AGENT_EMACS_SOCKET" --eval '(agent-memory-ensure-daily-file (list 5 16 2026))'`
 - Promote durable daily heading in place:
   - `emacsclient -s "$AGENT_EMACS_SOCKET" --eval '(agent-memory-add-id-to-heading "/path/to/daily.org" "Heading")'`
 - Resolve target file from Org ID when reading existing `[[id:...]]` links (file path only):

@@ -243,8 +243,9 @@ emacsclient -s "$AGENT_EMACS_SOCKET" -e '(kill-emacs)'
 - Use only `agent-memory-ensure-daily-file` for daily creation/open in automation
 - Avoid interactive daily capture/find functions in agent runs (`org-roam-dailies-capture-*`, `org-roam-dailies-find-*`), which can block `emacsclient`
 - After helper returns file path, use normal `edit` tool for daily content
+- New daily files use `#+filetags: :session:`
 - Example:
-  - `emacsclient -s "$AGENT_EMACS_SOCKET" --eval '(agent-memory-ensure-daily-file (list 5 16 2026) ":session:")'`
+  - `emacsclient -s "$AGENT_EMACS_SOCKET" --eval '(agent-memory-ensure-daily-file (list 5 16 2026))'`
 - DB sync is handled by helper; explicit sync still OK if needed
 
 4. Add ID to heading

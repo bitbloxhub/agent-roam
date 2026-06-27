@@ -118,9 +118,9 @@ Write note content separately with normal edit tool."
 
 (defun agent-memory--expand-org-time-format (s ts)
   "Expand org capture %<...> time tokens in S using TS."
-  (replace-regexp-in-string "%<\\([^>]+\\)>"
-                            (lambda (_)
-                              (format-time-string (match-string 1 s)
+  (replace-regexp-in-string "%<[^>]+>"
+                            (lambda (match)
+                              (format-time-string (substring match 2 -1)
                                                   ts))
                             s
                             t t))
@@ -147,35 +147,45 @@ Path resolved from `org-roam-dailies-capture-templates` target when possible."
                       (expand-file-name org-roam-dailies-directory
                                         org-roam-directory))))
 
-(defun agent-memory-ensure-daily-file (&optional date tags)
+(defun agent-memory-daily-head-for-date (date)
+  "Return expanded file header for daily DATE from capture template."
+  (let*
+      ((month (nth 0 date))
+       (day (nth 1 date))
+       (year (nth 2 date))
+       (ts (encode-time 0 0 0 day month year))
+       (template (car org-roam-dailies-capture-templates))
+       (target (plist-get (nthcdr 4 template) :target)))
+    (if (and (listp target)
+             (eq (car target) 'file+head)
+             (stringp (nth 2 target)))
+        (agent-memory--expand-org-time-format (nth 2 target) ts)
+      (error
+       "Unsupported org-roam dailies target; expected file+head"))))
+
+(defun agent-memory-daily-content-for-date (date)
+  "Return canonical initial daily file content for DATE."
+  (let ((head (agent-memory-daily-head-for-date date)))
+    (concat head
+            (unless (string-suffix-p "\n" head) "\n")
+            "#+filetags: :session:\n\n")))
+
+(defun agent-memory-ensure-daily-file (&optional date)
   "Non-interactive daily create/open for agent automation.
 Avoid interactive org-roam dailies capture/find fns in emacsclient flows.
 DATE format: (month day year). Nil means today.
-TAGS format: ':tag1:tag2:' or list."
+New daily files use `#+filetags: :session:`; existing files are left unchanged."
   (let* ((target-date
           (or date
               (list
                (string-to-number (format-time-string "%m"))
                (string-to-number (format-time-string "%d"))
                (string-to-number (format-time-string "%Y")))))
-         (file (agent-memory-daily-file-for-date target-date))
-         (tag-list (agent-memory--parse-tags tags))
-         (ts
-          (encode-time 0
-                       0
-                       0
-                       (nth 1 target-date)
-                       (nth 0 target-date)
-                       (nth 2 target-date))))
-    (org-roam-dailies--capture ts t "d")
+         (file (agent-memory-daily-file-for-date target-date)))
+    (make-directory (file-name-directory file) t)
     (with-current-buffer (find-file-noselect file)
-      (goto-char (point-min))
-      (unless (re-search-forward "^#\\+filetags:" nil t)
-        (when (and tag-list (> (length tag-list) 0))
-          (forward-line 1)
-          (insert (agent-memory--tags-line tag-list))))
-      (goto-char (point-min))
-      (org-id-get-create)
+      (when (= (buffer-size) 0)
+        (insert (agent-memory-daily-content-for-date target-date)))
       (save-buffer))
     (agent-memory-sync)
     file))

@@ -65,6 +65,10 @@ Search order (mandatory):
 - `#+title:` required
 - `#+filetags:` coarse retrieval tags
 - Org IDs created/ensured by Emacs helpers
+- Use Org ID links to encode meaningful note-to-note relationships so graph/backlink views stay useful
+- Building graph of related notes is valuable: it improves navigation, resurfacing, and context recovery across sessions
+- Prefer links for durable conceptual connections, related decisions, follow-ups, and references between notes
+- Prefer plain text for incidental mentions, temporary narration, or cases where cross-note relationship adds no retrieval value
 - `org-roam.db` is derived state, never edited directly
 
 ## Editing policy
@@ -251,7 +255,24 @@ emacsclient -s "$AGENT_EMACS_SOCKET" -e '(kill-emacs)'
 - Example by file + heading text:
   - `emacsclient -s "$AGENT_EMACS_SOCKET" --eval '(agent-memory-add-id-to-heading "/path/note.org" "Heading")'`
 
-5. Sync org-roam DB
+5. Resolve target file for Org ID links
+- Emacs fn: `agent-memory-file-for-id`
+- Use for reading existing `[[id:...]]` links when you need target file path
+- Returns file path only, not exact heading/position within file
+- Example:
+  - `emacsclient -s "$AGENT_EMACS_SOCKET" --eval '(princ (agent-memory-file-for-id "2f0d..."))'`
+
+6. Make Org-roam ID links
+- Use normal `edit` tool to insert links where needed
+- Link format with label: `[[id:ORG-ID][Description]]`
+- Link format without label: `[[id:ORG-ID]]`
+- Usually get target ID from `agent-memory-add-id-to-heading`, or reuse existing `:ID:` property after reading file
+- Make links when they improve graph quality: durable conceptual relation, source/reference note, related decision, or likely future navigation path
+- Prefer descriptive labels over bare IDs when link appears in prose
+- Avoid noisy over-linking: skip links for incidental mentions, repeated same-paragraph references, or transient work-log chatter
+- Example: `[[id:2f0d...][My heading]]`
+
+7. Sync org-roam DB
 - Command: `emacsclient -s "$AGENT_EMACS_SOCKET" --eval '(org-roam-db-sync)'`
 
 ## Git sync (optional)

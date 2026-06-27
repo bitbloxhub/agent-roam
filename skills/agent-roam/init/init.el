@@ -199,6 +199,18 @@ TAGS format: ':tag1:tag2:' or list."
       (agent-memory-sync)
       id)))
 
+(defun agent-memory-file-for-id (id)
+  "Return file path for Org-roam or Org ID ID."
+  (interactive "sID: ")
+  (let* ((node (org-roam-node-from-id id))
+         (file (or (and node (org-roam-node-file node))
+                   (org-id-find-id-file id))))
+    (unless file
+      (error "ID not found: %s" id))
+    (if (called-interactively-p 'interactive)
+        (message "%s" file)
+      file)))
+
 (defun agent-memory-normalize-file (file &optional title tags)
   "Ensure FILE has title/tags and top-level ID."
   (interactive

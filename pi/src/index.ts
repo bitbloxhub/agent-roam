@@ -292,6 +292,15 @@ function getAgentCompletions(prefix: string, currentAgent: string): Autocomplete
 export default function (pi: ExtensionAPI) {
 	let runtime: AgentRuntime | null = null
 	let selectedAgent = readLastSelectedAgent() ?? "default"
+	let cachedPatchedPrompt: string | null = null
+	let cachedBasePrompt: string | null = null
+	let promptCacheDirty = true
+
+	function invalidatePromptCache() {
+		cachedPatchedPrompt = null
+		cachedBasePrompt = null
+		promptCacheDirty = true
+	}
 
 	function startSessionRuntime() {
 		if (runtime)
@@ -308,10 +317,36 @@ export default function (pi: ExtensionAPI) {
 
 	function syncSelectedAgentFromSession(ctx: ExtensionContext) {
 		const sessionAgent = getAgentFromSessionEntries(ctx.sessionManager.getEntries())
-		selectedAgent = sessionAgent ?? readLastSelectedAgent() ?? selectedAgent
+		const nextAgent = sessionAgent ?? readLastSelectedAgent() ?? selectedAgent
+		if (nextAgent !== selectedAgent)
+			invalidatePromptCache()
+		selectedAgent = nextAgent
 		writeLastSelectedAgent(selectedAgent)
 		if (!sessionAgent)
 			appendSessionAgent(ctx.sessionManager.getSessionFile(), ctx.sessionManager.getSessionDir(), selectedAgent)
+	}
+
+	async function buildInjectedContext() {
+		const rt = runtime ?? startSessionRuntime()
+		const health = await waitForDaemonReady(rt)
+		if (!health.ok)
+			throw new Error(`emacs daemon not ready (${health.reason}) socket=${rt.socket}`)
+		const skill = readSkillText()
+		let notes: string[] = []
+		let tags: string[] = []
+		try {
+			notes = readSystemTaggedNotes(rt)
+		} catch {}
+		try {
+			tags = readTagList(rt)
+		} catch {}
+		return [
+			"# Agent-roam injected context",
+			skill ? `\n## Skill\n${skill}` : "",
+			"\n## KB git repo\nAGENT_ROAM_KB_DIR is always a git repo in this extension. Follow skill \"Git sync (optional)\" steps after memory edits and org-roam DB sync.",
+			tags.length ? `\n## Tag list\n${tags.map(tag => `- \`${tag}\``).join("\n")}` : "\n## Tag list\n(none)",
+			notes.length ? `\n## System-tagged notes\n${notes.join("\n\n")}` : "\n## System-tagged notes\n(none)",
+		].join("\n")
 	}
 
 	async function runReflection(ctx: ExtensionContext) {
@@ -352,6 +387,7 @@ export default function (pi: ExtensionAPI) {
 	}
 
 	pi.on("session_start", async (_event, ctx) => {
+		invalidatePromptCache()
 		try {
 			syncSelectedAgentFromSession(ctx)
 			const rt = startSessionRuntime()
@@ -365,32 +401,22 @@ export default function (pi: ExtensionAPI) {
 	pi.on("before_agent_start", async (event, ctx) => {
 		try {
 			syncSelectedAgentFromSession(ctx)
-			const rt = runtime ?? startSessionRuntime()
-			const health = await waitForDaemonReady(rt)
-			if (!health.ok)
-				throw new Error(`emacs daemon not ready (${health.reason}) socket=${rt.socket}`)
-			const skill = readSkillText()
-			let notes: string[] = []
-			let tags: string[] = []
-			try {
-				notes = readSystemTaggedNotes(rt)
-			} catch {}
-			try {
-				tags = readTagList(rt)
-			} catch {}
-			const content = [
-				"# Agent-roam injected context",
-				skill ? `\n## Skill\n${skill}` : "",
-				"\n## KB git repo\nAGENT_ROAM_KB_DIR is always a git repo in this extension. Follow skill \"Git sync (optional)\" steps after memory edits and org-roam DB sync.",
-				tags.length ? `\n## Tag list\n${tags.map(tag => `- \`${tag}\``).join("\n")}` : "\n## Tag list\n(none)",
-				notes.length ? `\n## System-tagged notes\n${notes.join("\n\n")}` : "\n## System-tagged notes\n(none)",
-			].join("\n")
+			if (!promptCacheDirty && cachedPatchedPrompt && cachedBasePrompt === event.systemPrompt)
+				return { systemPrompt: cachedPatchedPrompt }
+			const injectedContext = await buildInjectedContext()
+			cachedBasePrompt = event.systemPrompt
+			cachedPatchedPrompt = `${event.systemPrompt}\n\n${injectedContext}`
+			promptCacheDirty = false
 			return {
-				systemPrompt: `${event.systemPrompt}\n\n${content}`,
+				systemPrompt: cachedPatchedPrompt,
 			}
 		} catch (error) {
 			ctx.ui.notify(`agent-roam inject failed: ${(error as Error).message}`, "error")
 		}
+	})
+
+	pi.on("session_compact", async () => {
+		invalidatePromptCache()
 	})
 
 	pi.on("session_before_compact", async (_event, ctx) => {
@@ -412,12 +438,14 @@ export default function (pi: ExtensionAPI) {
 			return
 		stopDaemon(runtime)
 		runtime = null
+		invalidatePromptCache()
 	})
 
 	pi.registerCommand("agent", {
 		description: "Switch agent-roam memory agent: /agent <name>",
 		getArgumentCompletions: prefix => getAgentCompletions(prefix, selectedAgent),
 		handler: async (args, ctx) => {
+			invalidatePromptCache()
 			selectedAgent = sanitizeAgentName(args || "default")
 			writeLastSelectedAgent(selectedAgent)
 			appendSessionAgent(ctx.sessionManager.getSessionFile(), ctx.sessionManager.getSessionDir(), selectedAgent)
